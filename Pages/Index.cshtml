@@ -1,0 +1,141 @@
+﻿
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+
+<h1>Grocery List Manager</h1>
+<ul id="grocerylist">
+</ul>
+
+
+<div>
+    <hr />
+    <form id="addGroceryForm" class="form">
+        <h4>Add new grocery item</h4>
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" class="form-control" id="name" placeholder="Name" />
+        </div>                
+        <div class="form-group">
+            <label for="price">Price</label>
+            <input type="text" class="form-control" id="price" placeholder="Price" />
+        </div>
+
+        <div class="form-group">
+            <label for="quantity">Quantity</label>
+            <input type="text" class="form-control" id="quantity" placeholder="Quantity" />
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+
+@section Scripts {
+    <script>        
+        $(function() {
+            loadData();
+        $("#addGroceryForm").submit(function() {
+                addGroceryItem();
+                return false;
+            });
+        $("#grocerylist").on('click', 'a.item-delete', function() {
+                var id = $(this).parents("li").attr('item-id');
+                deleteGroceryItem(id);
+                return false;
+            });
+        $("#grocerylist").on('click', 'a.item-purchase', function() {
+            var id = $(this).parents("li").attr('item-id');
+            purchaseItem(id);
+            return false;
+            });
+        });
+
+
+        function loadData() {
+            $.ajax({
+                url: "/api/items",
+                dataType: 'json',
+                contentType: 'application/json',
+                method: 'GET'
+            }).done(function(responseJSON,status,xhr) {
+                // process the response when status code is 200-299
+                buildGroceryList(responseJSON);
+            }).fail(function(xhr,status,error) {
+                // deal with error from server (status code 400-599)
+                alert("There was an error retrieving the data");
+            });
+        }
+
+
+        function buildGroceryList(items) {
+            $("#grocerylist").empty();
+            $.each(items, function (index, item) {                
+                var li = $('<li item-id="' + item.id + '"></li>');
+                if (item.isItemPurchased) {
+                    $(li).text(item.name + ' - ' + item.price + '$' + ' - ' + item.quantity + ' (purchased)');
+                    $(li).append('<a href="#" class="pull-right item-delete">delete</a>');
+                    $(li).append('<span class="pull-right">&nbsp;|&nbsp;</span>');
+                } else {
+                    $(li).text(item.name + ' - ' + item.price + '$' + ' - ' + item.quantity);
+                    $(li).append('<a href="#" class="pull-right item-delete">delete</a>');
+                    $(li).append('<span class="pull-right">&nbsp;|&nbsp;</span>');
+                    $(li).append('<a href="#" class="pull-right item-purchase">purchase</a>');
+                }
+                $("#grocerylist").append(li);    
+            });
+        }
+
+
+        function addGroceryItem() {
+            var requestData = {
+                name: $("#name").val(),
+                price: $("#price").val(),
+                quantity: $("#quantity").val()
+            };
+            $.ajax({
+                url: 'http://localhost:5000/api/items',
+                dataType: 'json',
+                contentType: 'application/json',
+                method: 'POST',
+                data: JSON.stringify(requestData)
+            }).done(function(responseData, status, xhr) {
+                loadData();
+                $("#name").val("");
+                $("#price").val("");
+                $("#quantity").val("");
+            }).fail(function(xhr, status, error) {
+                alert("There was an error saving your grocery item");
+            });
+        }
+
+
+        function deleteGroceryItem(id) {
+            $.ajax({
+                url: 'http://localhost:5000/api/items/' + id,
+                dataType: 'json',
+                contentType: 'application/json',
+                method: 'DELETE',
+            }).done(function(responseData, status, xhr) {
+                loadData();                
+            }).fail(function(xhr, status, error) {
+                alert("There was an error deleting your grocery item");
+            });
+        }
+
+
+        function purchaseItem(id) {
+            $.ajax({
+                url: 'http://localhost:5000/api/items/purchase/' + id,
+                dataType: 'json',
+                contentType: 'application/json',
+                method: 'PUT',
+            }).done(function(responseData, status, xhr) {
+                loadData();
+            }).fail(function(xhr, status, error) {
+                alert("There was an error purchasing your item");
+            });
+        }
+    </script>
+}
